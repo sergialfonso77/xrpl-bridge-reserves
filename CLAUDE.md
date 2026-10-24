@@ -23,17 +23,27 @@ Academic reference: XChainWatcher (Augusto et al., 2024) — cross-chain rule-ba
 - XRPL EVM mainnet: RPC https://rpc.xrplevm.org, chain id 1440000, explorer explorer.xrplevm.org.
   Native token XRP (18 decimals on EVM vs 6 on XRPL).
 
-## OPEN QUESTIONS — resolve before trusting any report (phase 1 spike)
-1. **The gateway serves several destination chains** (xrpl-evm, ethereum, hedera, …). Locked XRP
-   backs XRP on ALL of them, so outstanding supply must be summed across every destination,
-   or reconciled per destination from deposit/release history.
-2. How is bridged XRP represented on the XRPL EVM? Native mint via ITS, an ERC-20 wrapper,
-   a precompile? Does native supply include genesis / validator / fee allocations that are
-   NOT bridge-backed? Find the token id / contract in Axelar ITS and docs.xrplevm.org.
-3. What happens to `gas_fee_amount`: does it stay in the gateway balance or get paid out?
-4. Transaction fees of multisig releases are paid by the gateway → small drift is expected.
-`src/cli.ts#outstandingOnDestinations` returns `[]` until these are answered, so the report says
-`status: "unverified"`. **Never hardcode or estimate this number.**
+## Phase 1 spike — findings (2026-10-24, verified live on mainnet)
+XRP ITS token id `ba5a21ca88ef6bba2bfff5088994f90e1077e2a1cc3dcc38bd261f00fce2824f` (origin chain `xrpl`,
+custom token, lock/unlock on XRPL, mint/burn on destinations). Source: Axelarscan `getITSAssets` + ITS Hub.
+1. **Several destinations — answered.** Enumerate them from the ITS Hub (`its_chains`, then
+   `token_instance{chain,token_id}`; contract in `config/networks.json`). Today: `xrpl-evm`, `hedera`
+   and **`stellar`** (the docs and Axelarscan do not list Stellar; the Hub does: ~14,061 XRP).
+   `src/destinations.ts` never uses a fixed list; an untracked chain without an on-chain measurer
+   makes the report `unverified` (`unmeasured`).
+2. **Representation — answered.** XRPL EVM: the *native* gas token (18 dec), token address
+   `0xEeee…EEeE`, mintBurn manager `0xdb0a…aE8`. Its supply lives in the Cosmos layer, not `eth_*`:
+   `GET cosmos-api.xrplevm.org/cosmos/bank/v1beta1/supply/by_denom?denom=axrp` (≈1,595,393 XRP).
+   Hedera: HTS token `0.0.10447287` wXRP (6 dec), measured via mirror node. Stellar: Soroban token
+   (address not found; measured only through the Hub tracked supply).
+   The Hub reports `untracked` for xrpl-evm/xrpl and `tracked` for hedera/stellar. For tracked chains
+   the Hub caps what can leave, so it is the liability; on-chain supply above it raises an alert.
+   Native supply apparently has no non-bridge allocation (it is below the gateway backing).
+3. **gas_fee_amount — not verified.** Hypothesis: it stays in the gateway balance and explains the
+   current surplus (~7,590 XRP, ratio ~1.0047). Check by summing `gas_fee_drops` over the full history.
+4. Release tx fees paid by the gateway → small drift is expected (still not measured).
+Known limits: Stellar has no independent on-chain check; measurements are not taken at the same
+instant (small skew); native supply is rounded up to drops.
 
 ## Rules (security-critical, keep tests for each)
 - Only `ledger_index: "validated"` data; ignore unvalidated or non-`tesSUCCESS` txs.
@@ -52,17 +62,19 @@ Academic reference: XChainWatcher (Augusto et al., 2024) — cross-chain rule-ba
 
 ## Commands
 npm test · npm run typecheck · npm run snapshot · npm run deposits -- <ledgerMin> · npm run signers
-`NETWORK=testnet` switches config (testnet XRPL EVM values still TODO in config/networks.json).
+`NETWORK=testnet` switches config (testnet XRPL EVM values still TODO in config/networks.json; testnet has no destination config, so it stays `unverified`).
 
 ## Status (2026-10-24)
-- Scaffold, logic and 22 unit tests pass. **Live RPC calls not yet exercised** (the sandbox that
-  wrote this could not reach XRPL nodes). First task: run `npm run snapshot` and
-  `npm run signers` on the Mac, fix any response-shape issues, then start the phase 1 spike.
-- No git repo yet: `git init` and first commit.
+- Live smoke test done: `snapshot`, `signers`, `deposits` work on mainnet (signer list: 28 signers,
+  quorum 19). `snapshot` now reports `backed`: backing 1,617,056.18 XRP vs outstanding 1,609,466.12 XRP.
+- IOUs on the gateway are bridged tokens the gateway issues itself (SOL, SHX, mXRP…), not locked XRP;
+  they are excluded from the XRP proof. `iou_issuer_not_gateway` flags third-party IOUs.
+- 33 unit tests pass. Git repo initialised.
 
 ## Next steps
-1. Live smoke test of the three commands; record real signer list (expect ~30 signers, quorum ~67%).
-2. Phase 1 spike (open questions above) → implement `outstandingOnDestinations`.
-3. GitHub Actions cron writing `data/latest.json` + static page in `public/`.
-4. Reconciliation: match deposits to destination mints via Axelar GMP/ITS API (axelarscan).
-5. Telegram alerts; write-up for the portfolio and an XAO DAO / XRPL Commons grant application.
+1. Verify open item 3 (gas fees) by scanning the full gateway history; find the Stellar XRP token
+   contract for an independent on-chain check.
+2. GitHub Actions cron writing `data/latest.json` + static page in `public/`.
+3. Reconciliation: release memos carry `message_id` (`0x<hash>-<n>`) and `unsigned_tx_hash`; match
+   deposits to destination mints via Axelar GMP/ITS API (axelarscan).
+4. Telegram alerts; write-up for the portfolio and an XAO DAO / XRPL Commons grant application.

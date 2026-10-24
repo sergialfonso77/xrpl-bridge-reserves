@@ -1,19 +1,40 @@
 {
   "mainnet": {
     "xrpl": {
-      "rpc": ["https://xrplcluster.com", "https://s1.ripple.com:51234"],
+      "rpc": [
+        "https://xrplcluster.com",
+        "https://s1.ripple.com:51234"
+      ],
       "axelarGateway": "rfmS3zqrQrka8wVyhXifEeyTwe8AMz2Yhw"
     },
     "xrplEvm": {
       "rpc": "https://rpc.xrplevm.org",
       "chainId": 1440000,
       "axelarChainName": "xrpl-evm",
-      "explorer": "https://explorer.xrplevm.org"
+      "explorer": "https://explorer.xrplevm.org",
+      "cosmosRest": [
+        "https://cosmos-api.xrplevm.org"
+      ],
+      "nativeDenom": "axrp"
+    },
+    "axelar": {
+      "rest": [
+        "https://axelar-rest.publicnode.com"
+      ],
+      "itsHub": "axelar1aqcj54lzz0rk22gvqgcn8fr5tx4rzwdv5wv5j9dmnacgefvd7wzsy2j2mr",
+      "originChain": "xrpl",
+      "xrpTokenId": "ba5a21ca88ef6bba2bfff5088994f90e1077e2a1cc3dcc38bd261f00fce2824f"
+    },
+    "hedera": {
+      "mirror": "https://mainnet-public.mirrornode.hedera.com",
+      "wxrpToken": "0.0.10447287"
     }
   },
   "testnet": {
     "xrpl": {
-      "rpc": ["https://s.altnet.rippletest.net:51234"],
+      "rpc": [
+        "https://s.altnet.rippletest.net:51234"
+      ],
       "axelarGateway": "rNrjh1KGZk2jBR3wPfAQnoidtFFYQKbQn2"
     },
     "xrplEvm": {

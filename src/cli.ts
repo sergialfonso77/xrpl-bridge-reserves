@@ -5,7 +5,8 @@
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { XrplClient } from "./xrpl.js";
 import { EvmClient } from "./evm.js";
-import { computeReport, type OutstandingSource } from "./reserves.js";
+import { computeReport } from "./reserves.js";
+import { measureOutstanding, type DestinationMeasurement } from "./destinations.js";
 import { classify } from "./deposits.js";
 import { diffSignerLists, minSignersForQuorum } from "./signers.js";
 import { dropsToXrp } from "./amounts.js";
@@ -17,11 +18,10 @@ const xrpl = new XrplClient(config.xrpl.rpc);
 
 const json = (v: unknown) => JSON.stringify(v, (_k, x) => (typeof x === "bigint" ? x.toString() : x), 2);
 
-async function outstandingOnDestinations(): Promise<OutstandingSource[]> {
-  // TODO (phase 1 spike): establish HOW bridged XRP is represented on each destination chain
-  // (native mint on XRPL EVM? ERC-20 on Ethereum/others?) and measure it here.
-  // Until then the report status is "unverified" — never fake this number.
-  return [];
+async function outstandingOnDestinations(): Promise<DestinationMeasurement> {
+  // Testnet has no destination config yet: stay "unverified" rather than guess.
+  if (!config.axelar) return { outstanding: [], unmeasured: [], alerts: [] };
+  return measureOutstanding({ axelar: config.axelar, xrplEvm: config.xrplEvm, hedera: config.hedera });
 }
 
 async function snapshot() {
@@ -35,13 +35,14 @@ async function snapshot() {
   } catch (e) {
     evm = { error: String(e) };
   }
-  const outstanding = await outstandingOnDestinations();
+  const { outstanding, unmeasured, alerts } = await outstandingOnDestinations();
   const report = computeReport({
     gatewayBalanceDrops: acct.balanceDrops,
     ownerCount: acct.ownerCount,
     reserveBaseDrops: res.baseDrops,
     reserveIncrementDrops: res.incrementDrops,
     outstanding,
+    unmeasured,
   });
   const out = {
     takenAt: new Date().toISOString(),
@@ -54,6 +55,8 @@ async function snapshot() {
     report,
     human: { gatewayBalanceXrp: dropsToXrp(report.gatewayBalanceDrops), backingXrp: dropsToXrp(report.backingDrops) },
     outstanding,
+    unmeasured,
+    alerts,
   };
   writeFileSync(new URL("../data/latest.json", import.meta.url), json(out));
   console.log(json(out));

@@ -12,6 +12,12 @@ describe("reserve report", () => {
     expect(r.backingDrops).toBe(998_800_000n);
   });
 
+  it("stays unverified when a destination holding the token was not measured", () => {
+    const r = computeReport({ ...base, unmeasured: ["newchain"], outstanding: [{ chain: "xrpl-evm", method: "test", drops: 1n }] });
+    expect(r.status).toBe("unverified");
+    expect(r.surplusDrops).toBeNull();
+  });
+
   it("is backed when backing covers outstanding supply", () => {
     const r = computeReport({ ...base, outstanding: [{ chain: "xrpl-evm", method: "test", drops: 900_000_000n }] });
     expect(r.status).toBe("backed");

@@ -12,6 +12,8 @@ export interface ReserveInput {
   reserveBaseDrops: bigint;
   reserveIncrementDrops: bigint;
   outstanding: OutstandingSource[];
+  /** Destination chains that hold the bridged token but could not be measured. */
+  unmeasured?: string[];
 }
 
 export interface ReserveReport {
@@ -28,7 +30,7 @@ export function computeReport(i: ReserveInput): ReserveReport {
   const ledgerReserveDrops = i.reserveBaseDrops + BigInt(i.ownerCount) * i.reserveIncrementDrops;
   const backingDrops = i.gatewayBalanceDrops - ledgerReserveDrops;
   const outstandingDrops = i.outstanding.reduce((a, s) => a + s.drops, 0n);
-  if (i.outstanding.length === 0) {
+  if (i.outstanding.length === 0 || (i.unmeasured?.length ?? 0) > 0) {
     return { gatewayBalanceDrops: i.gatewayBalanceDrops, ledgerReserveDrops, backingDrops, outstandingDrops, surplusDrops: null, collateralRatio: null, status: "unverified" };
   }
   const surplusDrops = backingDrops - outstandingDrops;
