@@ -39,10 +39,21 @@ custom token, lock/unlock on XRPL, mint/burn on destinations). Source: Axelarsca
    The Hub reports `untracked` for xrpl-evm/xrpl and `tracked` for hedera/stellar. For tracked chains
    the Hub caps what can leave, so it is the liability; on-chain supply above it raises an alert.
    Native supply apparently has no non-bridge allocation (it is below the gateway backing).
-3. **gas_fee_amount — not verified.** Hypothesis: it stays in the gateway balance and explains the
-   current surplus (~7,590 XRP, ratio ~1.0047). Check by summing `gas_fee_drops` over the full history.
-4. Release tx fees paid by the gateway → small drift is expected (still not measured).
-Known limits: Stellar has no independent on-chain check; measurements are not taken at the same
+3. **gas_fee_amount — answered (full history scan, 2026-10-29, ledger 107,978,173).** Gas stays in the
+   gateway balance. Balance 1,618,562.59 XRP = net minted (deposits − gas) − releases
+   + gas fees 4,503.49 + other inflows 6,204.56 (add_reserves 2,600, unmemoed funding ~3,491, add_gas 90.7,
+   call_contract 22.4) − fees paid by the gateway 2,414.94. The identity holds to 1 drop (every 50k-ledger
+   window checked against `account_info`). Surplus implied by XRPL flows: 8,244.5 XRP; measured by `snapshot`:
+   7,574.2 XRP. Gas fees are ~55% of the surplus; the rest is non-minting inflows minus release fees.
+   Also: 203 deposits (≈38 XRP) have an unusable gas memo (gas ≥ amount, missing or non-integer): never minted,
+   funds stuck in the gateway. 200 XRP of "releases" without memos are the account's initial funding going back
+   to the setup account `rJJAm…`, not burns.
+4. **Residual discrepancy (open).** Measured outstanding is ~470 XRP (0.03%) HIGHER than XRPL flows predict
+   (net minted − bridge releases, after removing the 200 XRP setup transfer). Candidates, neither verified:
+   (a) the Hub tracked supply for Stellar exceeds the real Stellar supply (Hedera shows the same direction,
+   +2.7 XRP: Hub 10.88 vs mirror node 8.19), (b) native XRPL EVM supply includes non-bridge XRP.
+   The direction is conservative (liabilities overstated, never understated).
+Known limits: Stellar has no independent on-chain check; **account_tx over public clusters silently drops rows** (a 999 XRP payment was missing from a naive scan; ~160 rows of 5.8M): any history scan must be verified against account_info balances per ledger window and refetched when the gap is non-zero; measurements are not taken at the same
 instant (small skew); native supply is rounded up to drops.
 
 ## Rules (security-critical, keep tests for each)
@@ -69,12 +80,13 @@ npm test · npm run typecheck · npm run snapshot · npm run deposits -- <ledger
   quorum 19). `snapshot` now reports `backed`: backing 1,617,056.18 XRP vs outstanding 1,609,466.12 XRP.
 - IOUs on the gateway are bridged tokens the gateway issues itself (SOL, SHX, mXRP…), not locked XRP;
   they are excluded from the XRP proof. `iou_issuer_not_gateway` flags third-party IOUs.
-- 33 unit tests pass. Git repo initialised.
+- 33 unit tests pass. Git repo initialised. Gateway history: 5.8M tx (mostly DEX/AMM noise from the gateway being an IOU issuer), 18.7k ITS XRP deposits, 10.3k releases.
 
 ## Next steps
-1. Verify open item 3 (gas fees) by scanning the full gateway history; find the Stellar XRP token
-   contract for an independent on-chain check.
-2. GitHub Actions cron writing `data/latest.json` + static page in `public/`.
+1. Make `deposits`/history scans safe: verify per-window balance identity (see item 4 in the spike) before
+   trusting any account_tx result; this blocks phase 2 reconciliation. Resolve the ~470 XRP residual
+   (find the Stellar XRP token contract for an independent supply check).
+2. GitHub Actions cron writing `data/latest.json` + static page in `public/`. Use incremental scans, never full history.
 3. Reconciliation: release memos carry `message_id` (`0x<hash>-<n>`) and `unsigned_tx_hash`; match
    deposits to destination mints via Axelar GMP/ITS API (axelarscan).
 4. Telegram alerts; write-up for the portfolio and an XAO DAO / XRPL Commons grant application.
