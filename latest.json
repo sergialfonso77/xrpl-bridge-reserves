@@ -1,0 +1,53 @@
+{
+  "schema": 1,
+  "takenAt": "2026-11-09T13:07:28.756Z",
+  "network": "mainnet",
+  "gateway": "rfmS3zqrQrka8wVyhXifEeyTwe8AMz2Yhw",
+  "xrplLedger": 108218213,
+  "report": {
+    "gatewayBalanceDrops": "1628162877383",
+    "ledgerReserveDrops": "46400000",
+    "backingDrops": "1628116477383",
+    "outstandingDrops": "1620548770210",
+    "surplusDrops": "7567707173",
+    "collateralRatio": 1.004669,
+    "status": "backed"
+  },
+  "human": {
+    "gatewayBalanceXrp": "1628162.877383",
+    "backingXrp": "1628116.477383",
+    "outstandingXrp": "1620548.77021",
+    "surplusXrp": "7567.707173"
+  },
+  "outstanding": [
+    {
+      "chain": "hedera",
+      "method": "its hub tracked supply",
+      "drops": "12971983"
+    },
+    {
+      "chain": "stellar",
+      "method": "its hub tracked supply",
+      "drops": "19748539872"
+    },
+    {
+      "chain": "xrpl-evm",
+      "method": "cosmos bank supply of axrp",
+      "drops": "1600787258355"
+    }
+  ],
+  "unmeasured": [],
+  "alerts": [],
+  "signers": {
+    "count": 28,
+    "quorum": 1223320,
+    "minForQuorum": 19
+  },
+  "signerAlerts": [
+    {
+      "severity": "info",
+      "message": "Signer list first observed (28 signers, quorum 1223320)"
+    }
+  ],
+  "problems": []
+}

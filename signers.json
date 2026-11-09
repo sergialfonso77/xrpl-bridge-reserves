@@ -1,0 +1,117 @@
+{
+  "quorum": 1223320,
+  "entries": [
+    {
+      "account": "rQNyEBjpK1it47MkTuKhsYGmSepnBEpSk",
+      "weight": 65535
+    },
+    {
+      "account": "rpY1xD5UkeS1nikRf7dApjaPmBy2M1JS8v",
+      "weight": 65535
+    },
+    {
+      "account": "rpzNzw1KzLdBACJr7bbLYPzD4ArzpheAT7",
+      "weight": 65535
+    },
+    {
+      "account": "rs7wzp1VayfDN9bWKUP2fuPDG1uPDaN3ML",
+      "weight": 65535
+    },
+    {
+      "account": "rs76GMXxeHLQQ9ddGuQQPc4vFJWyW6xFFh",
+      "weight": 65535
+    },
+    {
+      "account": "rhBUFC2KRYyd25QscxGS7zWD5zEMdfpc2g",
+      "weight": 65535
+    },
+    {
+      "account": "rh2Fw9NrkmpE9CrNnAWtVSjt6mfMbzJmXB",
+      "weight": 65535
+    },
+    {
+      "account": "rneLqjg9Ks2ut6WfGRzQSpcr3Rw1beCH69",
+      "weight": 65535
+    },
+    {
+      "account": "rahxHGsrGvVdkmkm6Z78mH4Tbxv6sY19nw",
+      "weight": 65535
+    },
+    {
+      "account": "rauh9N3qKWpzaY9YivcTEsLYCJWmxbewdj",
+      "weight": 65535
+    },
+    {
+      "account": "raxZB9JVoVwtNgM4qv9SYpPHgJRwM3QfZe",
+      "weight": 65535
+    },
+    {
+      "account": "rfZz6sC4EtQR43Sbm7rTkJ2JaZ2c6V8Vro",
+      "weight": 65535
+    },
+    {
+      "account": "r3QtER8j3JLUxpJ3LuXcqqmLvTncL4Xjao",
+      "weight": 65535
+    },
+    {
+      "account": "r3ecdpoxK5fYMEvYAjrRosGGiH8PrB3Mmj",
+      "weight": 65535
+    },
+    {
+      "account": "r9FFeuPUGTV8EEe8tmTj7ZfBucy5ih2qaA",
+      "weight": 65535
+    },
+    {
+      "account": "rDUdQExxMJwycR3e1WLe7HVKyChaDVT5mA",
+      "weight": 65535
+    },
+    {
+      "account": "rDqyfFeeHw9SVhnoRXqDoQJj2pnnRHkh9e",
+      "weight": 65535
+    },
+    {
+      "account": "rEsfvrujCnW8JhqATBup1wHHqo5XknnqQD",
+      "weight": 65535
+    },
+    {
+      "account": "rE3HMTw8jb1YGZFmUVKg1vH2gLZhFVzcRz",
+      "weight": 65535
+    },
+    {
+      "account": "rG3WtJ4HbuxWph4aueKNEBd57cyvgNMB1K",
+      "weight": 65535
+    },
+    {
+      "account": "rGWWKnKdDrdEMX5TyAocYETwhpdAaPr6FN",
+      "weight": 65535
+    },
+    {
+      "account": "rJa2CkF85cbZZuXbhjK57Phhw1zpmzNNKo",
+      "weight": 65535
+    },
+    {
+      "account": "rLXFdmpEzHst1Y8X35fYoPDAwwFJzMGdEJ",
+      "weight": 65535
+    },
+    {
+      "account": "rLeCxztvV9XQnZpQVKMLqfxLY4iJcygM7B",
+      "weight": 65535
+    },
+    {
+      "account": "rL5Wb1nsW1pCYK2Hxo2efuhw8gqK1cRprg",
+      "weight": 65535
+    },
+    {
+      "account": "rLFpfrHPy88xMyHzVt6izyDHHPUVRZ5mKW",
+      "weight": 65535
+    },
+    {
+      "account": "rMDwc2hqtmmsmntrZ3hBNAQ9S7Qwae3Dye",
+      "weight": 65535
+    },
+    {
+      "account": "rQDkEnhSFTy2fTHAkLa3v5iWMkNdMhmeTV",
+      "weight": 65535
+    }
+  ]
+}
