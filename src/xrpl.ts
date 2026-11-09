@@ -1,4 +1,5 @@
 // Minimal XRPL JSON-RPC client (no dependencies). Only reads validated data.
+import type { HistorySource } from "./history.js";
 
 export interface SignerEntry {
   account: string;
@@ -18,30 +19,58 @@ export interface AccountSnapshot {
   signerList: SignerList | null;
 }
 
-export class XrplClient {
-  constructor(private readonly endpoints: string[]) {
+/** The node answered, but with an error (e.g. actNotFound): deterministic, retrying the same query will not help. */
+class RpcError extends Error {}
+
+export interface XrplClientOptions {
+  /** Passes over the endpoint list before giving up on transport failures (timeouts, HTTP 5xx, DNS). */
+  rounds?: number;
+  backoffMs?: number;
+  timeoutMs?: number;
+}
+
+export class XrplClient implements HistorySource {
+  private readonly rounds: number;
+  private readonly backoffMs: number;
+  private readonly timeoutMs: number;
+
+  constructor(private readonly endpoints: string[], opts: XrplClientOptions = {}) {
     if (endpoints.length === 0) throw new Error("At least one XRPL endpoint is required");
+    this.rounds = opts.rounds ?? 3;
+    this.backoffMs = opts.backoffMs ?? 1_000;
+    this.timeoutMs = opts.timeoutMs ?? 30_000;
   }
 
-  async request<T = any>(method: string, params: Record<string, unknown>): Promise<T> {
+  /**
+   * Tries every endpoint, starting at `startAt` (mod endpoint count) so retries can hit another node.
+   * Transport failures are retried with backoff; if every endpoint answered with an RPC error it throws at once.
+   */
+  async request<T = any>(method: string, params: Record<string, unknown>, startAt = 0): Promise<T> {
     let lastError: unknown;
-    for (const url of this.endpoints) {
-      try {
-        const res = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ method, params: [params] }),
-          signal: AbortSignal.timeout(15_000),
-        });
-        if (!res.ok) throw new Error(`${url} HTTP ${res.status}`);
-        const body: any = await res.json();
-        if (body?.result?.status === "error") {
-          throw new Error(`${method}: ${body.result.error} ${body.result.error_message ?? ""}`.trim());
+    for (let round = 0; round < this.rounds; round++) {
+      let transportFailure = false;
+      for (let i = 0; i < this.endpoints.length; i++) {
+        const url = this.endpoints[(startAt + i) % this.endpoints.length]!;
+        try {
+          const res = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ method, params: [params] }),
+            signal: AbortSignal.timeout(this.timeoutMs),
+          });
+          if (!res.ok) throw new Error(`${url} HTTP ${res.status}`);
+          const body: any = await res.json();
+          if (body?.result?.status === "error") {
+            throw new RpcError(`${method}: ${body.result.error} ${body.result.error_message ?? ""}`.trim());
+          }
+          return body.result as T;
+        } catch (err) {
+          lastError = err;
+          if (!(err instanceof RpcError)) transportFailure = true;
         }
-        return body.result as T;
-      } catch (err) {
-        lastError = err;
       }
+      if (!transportFailure) break;
+      if (round < this.rounds - 1) await new Promise((r) => setTimeout(r, this.backoffMs * (round + 1)));
     }
     throw lastError;
   }
@@ -72,21 +101,31 @@ export class XrplClient {
     return { baseDrops: BigInt(l.reserve_base), incrementDrops: BigInt(l.reserve_inc) };
   }
 
-  /** Page through validated transactions of an account. */
-  async *accountTx(account: string, opts: { ledgerMin?: number; ledgerMax?: number } = {}) {
-    let marker: unknown = undefined;
-    do {
-      const r: any = await this.request("account_tx", {
-        account,
-        ledger_index_min: opts.ledgerMin ?? -1,
-        ledger_index_max: opts.ledgerMax ?? -1,
-        forward: true,
-        limit: 200,
-        ...(marker ? { marker } : {}),
-      });
-      for (const t of r.transactions ?? []) yield t;
-      marker = r.marker;
-    } while (marker);
+  /** Index of the latest validated ledger. */
+  async validatedLedger(): Promise<number> {
+    const r: any = await this.request("ledger", { ledger_index: "validated" });
+    if (r.validated !== true) throw new Error("ledger did not return validated data");
+    return Number(r.ledger_index);
+  }
+
+  async balanceAt(account: string, ledger: number): Promise<bigint> {
+    try {
+      const r: any = await this.request("account_info", { account, ledger_index: ledger });
+      if (r.validated !== true) throw new Error(`account_info at ledger ${ledger} did not return validated data`);
+      return BigInt(r.account_data.Balance);
+    } catch (e) {
+      if (String(e).includes("actNotFound")) return 0n; // not created yet at that ledger
+      throw e;
+    }
+  }
+
+  /** One page of account_tx (oldest first) within [min, max]. Use `verifiedAccountTx` from history.ts, never loop on this alone. */
+  async accountTxPage(account: string, min: number, max: number, marker: unknown, attempt: number) {
+    return this.request<{ transactions: any[]; marker?: unknown }>(
+      "account_tx",
+      { account, ledger_index_min: min, ledger_index_max: max, forward: true, limit: 100, ...(marker ? { marker } : {}) },
+      attempt,
+    );
   }
 }
 

@@ -1,6 +1,6 @@
 // Usage:
 //   npm run snapshot            gateway balance, signer list, reserve report -> data/latest.json
-//   npm run deposits -- 90000000  classify gateway transactions from a ledger index onwards
+//   npm run deposits -- 107000000  classify gateway transactions from a ledger index onwards (balance-verified)
 //   npm run signers             compare current signer list with data/signers.json and print alerts
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { XrplClient } from "./xrpl.js";
@@ -8,6 +8,7 @@ import { EvmClient } from "./evm.js";
 import { computeReport } from "./reserves.js";
 import { measureOutstanding, type DestinationMeasurement } from "./destinations.js";
 import { classify } from "./deposits.js";
+import { verifiedAccountTx } from "./history.js";
 import { diffSignerLists, minSignersForQuorum } from "./signers.js";
 import { dropsToXrp } from "./amounts.js";
 
@@ -62,9 +63,15 @@ async function snapshot() {
   console.log(json(out));
 }
 
-async function deposits(ledgerMin?: number) {
+async function deposits(ledgerMin: number) {
   const totals: Record<string, bigint> = {};
-  for await (const entry of xrpl.accountTx(gateway, { ledgerMin })) {
+  const ledgerMax = await xrpl.validatedLedger();
+  const history = verifiedAccountTx(xrpl, gateway, {
+    ledgerMin,
+    ledgerMax,
+    onWindow: (w) => console.error(`verified ${w.ledgerMin}..${w.ledgerMax}: ${w.entries} tx${w.attempts > 1 ? ` (${w.attempts} attempts)` : ""}`),
+  });
+  for await (const entry of history) {
     const ev = classify(entry, gateway);
     if (!ev || ev.kind === "other") continue;
     if (ev.kind === "deposit" && ev.netDrops !== null) {
@@ -89,7 +96,14 @@ async function signers() {
 }
 
 const [cmd, arg] = process.argv.slice(2);
-const run = { snapshot, deposits: () => deposits(arg ? Number(arg) : undefined), signers }[cmd ?? ""];
+const run = {
+  snapshot,
+  deposits: () => {
+    if (!/^\d+$/.test(arg ?? "")) throw new Error("deposits needs a start ledger: npm run deposits -- <ledgerMin> (a full scan takes hours)");
+    return deposits(Number(arg));
+  },
+  signers,
+}[cmd ?? ""];
 if (!run) {
   console.error("Commands: snapshot | deposits [ledgerMin] | signers");
   process.exit(1);
