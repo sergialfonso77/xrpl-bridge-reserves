@@ -1,23 +1,23 @@
 {
   "schema": 1,
-  "takenAt": "2026-11-09T13:07:28.756Z",
+  "takenAt": "2026-11-09T13:11:22.116Z",
   "network": "mainnet",
   "gateway": "rfmS3zqrQrka8wVyhXifEeyTwe8AMz2Yhw",
-  "xrplLedger": 108218213,
+  "xrplLedger": 108218267,
   "report": {
-    "gatewayBalanceDrops": "1628162877383",
+    "gatewayBalanceDrops": "1628261877401",
     "ledgerReserveDrops": "46400000",
-    "backingDrops": "1628116477383",
-    "outstandingDrops": "1620548770210",
-    "surplusDrops": "7567707173",
+    "backingDrops": "1628215477401",
+    "outstandingDrops": "1620647720198",
+    "surplusDrops": "7567757203",
     "collateralRatio": 1.004669,
     "status": "backed"
   },
   "human": {
-    "gatewayBalanceXrp": "1628162.877383",
-    "backingXrp": "1628116.477383",
-    "outstandingXrp": "1620548.77021",
-    "surplusXrp": "7567.707173"
+    "gatewayBalanceXrp": "1628261.877401",
+    "backingXrp": "1628215.477401",
+    "outstandingXrp": "1620647.720198",
+    "surplusXrp": "7567.757203"
   },
   "outstanding": [
     {
@@ -33,7 +33,7 @@
     {
       "chain": "xrpl-evm",
       "method": "cosmos bank supply of axrp",
-      "drops": "1600787258355"
+      "drops": "1600886208343"
     }
   ],
   "unmeasured": [],
@@ -43,11 +43,6 @@
     "quorum": 1223320,
     "minForQuorum": 19
   },
-  "signerAlerts": [
-    {
-      "severity": "info",
-      "message": "Signer list first observed (28 signers, quorum 1223320)"
-    }
-  ],
+  "signerAlerts": [],
   "problems": []
 }
