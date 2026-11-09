@@ -85,15 +85,15 @@ npm test · npm run typecheck · npm run snapshot · npm run deposits -- <ledger
   quorum 19). `snapshot` now reports `backed`: backing 1,617,056.18 XRP vs outstanding 1,609,466.12 XRP.
 - IOUs on the gateway are bridged tokens the gateway issues itself (SOL, SHX, mXRP…), not locked XRP;
   they are excluded from the XRP proof. `iou_issuer_not_gateway` flags third-party IOUs.
-- 56 unit tests pass. Git repo initialised. Gateway history: 5.8M tx (mostly DEX/AMM noise from the gateway being an IOU issuer), 18.7k ITS XRP deposits, 10.3k releases.
+- 56 unit tests pass. Public repo + Pages deployed. Gateway history: 5.8M tx (mostly DEX/AMM noise from the gateway being an IOU issuer), 18.7k ITS XRP deposits, 10.3k releases.
 
 ## Next steps
 1. History scans are now gap-checked (`src/history.ts`); never read `account_tx` any other way. Limit: a dropped
    tx that did not move the gateway's XRP balance (e.g. third-party IOU payments) is undetectable.
    Resolve the ~470 XRP residual (find the Stellar XRP token contract for an independent supply check).
-2. Dashboard + cron are built and tested locally but NOT yet deployed: no git remote exists. To go live: create the
-   GitHub repo, push, set Pages source to GitHub Actions, run the `snapshot` workflow once. Then add Telegram alerts
-   (phase 3) on top of `problems` in `public/data/latest.json`.
+2. Dashboard + hourly cron are LIVE (2026-11-09): https://sergialfonso77.github.io/xrpl-bridge-reserves/ (repo
+   github.com/sergialfonso77/xrpl-bridge-reserves, Pages source = GitHub Actions, state on the `data` branch).
+   Next: Telegram alerts (phase 3) driven by `problems` in `public/data/latest.json`; add a LICENSE file (README says MIT).
 3. Reconciliation: release memos carry `message_id` (`0x<hash>-<n>`) and `unsigned_tx_hash`; match
    deposits to destination mints via Axelar GMP/ITS API (axelarscan).
 4. Telegram alerts; write-up for the portfolio and an XAO DAO / XRPL Commons grant application.
