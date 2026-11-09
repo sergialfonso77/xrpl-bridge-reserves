@@ -48,11 +48,22 @@ custom token, lock/unlock on XRPL, mint/burn on destinations). Source: Axelarsca
    Also: 203 deposits (≈38 XRP) have an unusable gas memo (gas ≥ amount, missing or non-integer): never minted,
    funds stuck in the gateway. 200 XRP of "releases" without memos are the account's initial funding going back
    to the setup account `rJJAm…`, not burns.
-4. **Residual discrepancy (open).** Measured outstanding is ~470 XRP (0.03%) HIGHER than XRPL flows predict
-   (net minted − bridge releases, after removing the 200 XRP setup transfer). Candidates, neither verified:
-   (a) the Hub tracked supply for Stellar exceeds the real Stellar supply (Hedera shows the same direction,
-   +2.7 XRP: Hub 10.88 vs mirror node 8.19), (b) native XRPL EVM supply includes non-bridge XRP.
-   The direction is conservative (liabilities overstated, never understated).
+4. **Residual discrepancy — partly explained (2026-11-09).**
+   - Stellar XRP token = Soroban contract `CDDJRQH6BWYEXGJR4UU3PKKSLJUBBCCZQODHD6RNQ7MFEMKJREHEDACU` (wXRP, 6 dec,
+     manager `CCOA2B42…PUHXX`, ITS `CBDBMIOF…D6C6`). It has NO `total_supply` and the public Soroban RPC keeps only
+     7 days of events, so Stellar can only be measured through the ITS Hub tracked supply.
+   - XRPL EVM: summing the ITS events of the XRP token (ITS `0xB5FB…E9e3C`; `InterchainTransferReceived` minus
+     `InterchainTransfer`, `eth_getLogs` limited to 10,000 blocks, first event block 481,848; 0 duplicate logs/commandIds)
+     gives the bridge-attributable supply. Native supply minus that is **exactly 2,999.24 XRP** (whole drops) at two
+     different blocks 1,509 apart, so it is a constant, non-bridge component of the native supply (consistent with
+     genesis/ops funding; origin not proven). It makes `snapshot` overstate xrpl-evm outstanding by that amount.
+   - Net effect: against XRPL flows (net minted − bridge releases) the bridge-attributable outstanding is ~2.5k XRP
+     LOWER than expected, which points to deposits accepted on XRPL but never minted (stuck/unprocessed; also deposits to
+     chains where the Hub has no XRP instance: solana 10 XRP, avalanche 0.15 XRP). Not yet proven: it needs per-deposit
+     matching (XRPL deposit tx hash ↔ EVM `commandId`, phase 2).
+   - Unverified oddity: EVM inbound from `xrpl` (41.956M XRP) exceeds XRPL-side deposits to xrpl-evm (41.20M at an
+     earlier date); the XRPL dump was lost, so this was not rechecked. Do not rely on either gross figure.
+   - Direction stays conservative: the dashboard overstates liabilities, never understates them.
 Known limits: Stellar has no independent on-chain check; **account_tx over public clusters silently drops rows** (a 999 XRP payment was missing from a naive scan; ~160 rows of 5.8M): any history scan must be verified against account_info balances per ledger window and refetched when the gap is non-zero; measurements are not taken at the same
 instant (small skew); native supply is rounded up to drops.
 
@@ -91,7 +102,7 @@ npm test · npm run typecheck · npm run snapshot · npm run deposits -- <ledger
 ## Next steps
 1. History scans are now gap-checked (`src/history.ts`); never read `account_tx` any other way. Limit: a dropped
    tx that did not move the gateway's XRP balance (e.g. third-party IOU payments) is undetectable.
-   Resolve the ~470 XRP residual (find the Stellar XRP token contract for an independent supply check).
+   Resolve the rest of the residual with per-deposit reconciliation (phase 2); optionally measure xrpl-evm via ITS events instead of native supply.
 2. Dashboard + hourly cron are LIVE (2026-11-09): https://sergialfonso77.github.io/xrpl-bridge-reserves/ (repo
    github.com/sergialfonso77/xrpl-bridge-reserves, Pages source = GitHub Actions, state on the `data` branch).
    Telegram alerts are implemented (`npm run notify`, secrets `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID`; state in
