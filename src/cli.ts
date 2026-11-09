@@ -2,6 +2,7 @@
 //   npm run snapshot            gateway balance, signer list, reserve report -> data/latest.json
 //   npm run deposits -- 107000000  classify gateway transactions from a ledger index onwards (balance-verified)
 //   npm run site-data           snapshot + signer diff -> public/data/{latest,history}.json (scheduled job)
+//   npm run notify [-- --test]  Telegram alerts from public/data/latest.json (env TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID)
 //   npm run signers             compare current signer list with data/signers.json and print alerts
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { XrplClient } from "./xrpl.js";
@@ -13,6 +14,7 @@ import { verifiedAccountTx } from "./history.js";
 import { diffSignerLists, minSignersForQuorum } from "./signers.js";
 import { dropsToXrp } from "./amounts.js";
 import { appendHistory, historyPoint, toPublic, type Snapshot } from "./publish.js";
+import { emptyAlertState, planNotifications, sendTelegram } from "./telegram.js";
 
 const network = process.env.NETWORK ?? "mainnet";
 const config = JSON.parse(readFileSync(new URL("../config/networks.json", import.meta.url), "utf8"))[network];
@@ -123,6 +125,29 @@ async function signers() {
   if (alerts.some((a) => a.severity === "critical")) process.exitCode = 2;
 }
 
+/** Telegram alerts from public/data/latest.json. Needs TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID; skips quietly without them. `--test` sends a hello. */
+async function notify() {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+  if (!token || !chatId) {
+    console.log("Telegram not configured (TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID not set): skipping.");
+    return;
+  }
+  const pageUrl = process.env.PAGE_URL ?? "";
+  if (arg === "--test") {
+    await sendTelegram(token, chatId, `XRP bridge reserves: Telegram alerts are configured.\n${pageUrl}`);
+    console.log("Telegram test message sent.");
+    return;
+  }
+  const pub = JSON.parse(readFileSync(new URL("../public/data/latest.json", import.meta.url), "utf8")) as ReturnType<typeof toPublic>;
+  const statePath = new URL("../data/alert-state.json", import.meta.url);
+  const state = existsSync(statePath) ? JSON.parse(readFileSync(statePath, "utf8")) : emptyAlertState();
+  const { messages, next } = planNotifications(pub, state, pageUrl, new Date());
+  for (const m of messages) await sendTelegram(token, chatId, m);
+  writeFileSync(statePath, json(next)); // only after every message went out, so a failed send is retried next run
+  console.log(`Telegram: ${messages.length} message(s) sent.`);
+}
+
 const [cmd, arg] = process.argv.slice(2);
 const run = {
   snapshot,
@@ -132,9 +157,10 @@ const run = {
   },
   signers,
   publish,
+  notify,
 }[cmd ?? ""];
 if (!run) {
-  console.error("Commands: snapshot | deposits <ledgerMin> | signers | publish");
+  console.error("Commands: snapshot | deposits <ledgerMin> | signers | publish | notify [--test]");
   process.exit(1);
 }
 run().catch((e) => {

@@ -8,6 +8,11 @@ on:
   schedule:
     - cron: "17 * * * *"
   workflow_dispatch:
+    inputs:
+      test_telegram:
+        description: "Send a Telegram test message after the run"
+        type: boolean
+        default: false
 
 concurrency:
   group: snapshot
@@ -36,13 +41,30 @@ jobs:
         run: |
           mkdir -p data
           if git fetch --depth 1 origin data; then
-            for f in signers.json history.json; do
+            for f in signers.json history.json alert-state.json; do
               if git cat-file -e "FETCH_HEAD:$f" 2>/dev/null; then git show "FETCH_HEAD:$f" > "data/$f"; fi
             done
           fi
 
       - name: Snapshot and build public data
         run: npm run site-data
+
+      - name: Telegram alerts
+        # A failed send must not block publishing; the state is then not advanced, so it is retried next run.
+        continue-on-error: true
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          PAGE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
+        run: npm run notify
+
+      - name: Telegram test message
+        if: ${{ inputs.test_telegram }}
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          PAGE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
+        run: npm run notify -- --test
 
       - name: Save state to the data branch
         run: |
@@ -58,6 +80,7 @@ jobs:
             git rm -rf -q .
           fi
           cp "$GITHUB_WORKSPACE/data/signers.json" "$GITHUB_WORKSPACE/data/history.json" "$GITHUB_WORKSPACE/public/data/latest.json" .
+          if [ -f "$GITHUB_WORKSPACE/data/alert-state.json" ]; then cp "$GITHUB_WORKSPACE/data/alert-state.json" .; fi
           git add -A
           if git diff --cached --quiet; then
             echo "state unchanged"
@@ -101,3 +124,22 @@ jobs:
       - run: |
           echo "::error::Proof of reserves reports ${{ needs.publish.outputs.problems }} problem(s); see the warnings of the publish job."
           exit 1
+
+  # If the job itself breaks (RPC down, deploy failed) nobody would otherwise know: say so on Telegram.
+  # Problems found by a healthy run are reported by `npm run notify` instead, not here.
+  notify-failure:
+    needs: [publish, deploy]
+    if: ${{ always() && (needs.publish.result == 'failure' || needs.deploy.result == 'failure') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    steps:
+      - run: |
+          if [ -z "$TELEGRAM_BOT_TOKEN" ] || [ -z "$TELEGRAM_CHAT_ID" ]; then echo "Telegram not configured; skipping."; exit 0; fi
+          curl -sS -f -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" \
+            --data-urlencode "text=XRP bridge reserves: the scheduled snapshot job failed, so the dashboard may be stale. ${RUN_URL}" \
+            --data-urlencode "disable_web_page_preview=true" > /dev/null

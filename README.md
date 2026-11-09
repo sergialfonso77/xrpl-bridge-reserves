@@ -24,6 +24,7 @@ npm run snapshot          # writes data/latest.json
 npm run signers           # alerts vs the last saved signer list (exit 2 on critical)
 npm run deposits -- 108000000   # balance-verified history from that ledger
 npm run site-data         # snapshot + signer diff -> public/data/{latest,history}.json
+npm run notify -- --test  # Telegram test (needs TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID)
 ```
 
 ## Public dashboard (GitHub Actions + Pages)
@@ -40,6 +41,19 @@ signer list changes (warning or critical). The first signer-list observation is 
 Notes: GitHub disables scheduled workflows after 60 days without repository activity; a changed
 signer list alerts once (the baseline then moves to the new list). Third-party actions are pinned by
 commit SHA.
+
+## Telegram alerts
+`npm run notify` (run by the workflow after each snapshot) sends plain-text messages to a Telegram chat:
+- a **new or changed problem** (status not `backed`, unmeasured chain, supply disagreement), once;
+- the same problem **still open** after 24 hours, as a reminder;
+- **resolved**, when it clears;
+- a **signer-list change** (warning or critical), once, because the baseline moves after it is reported;
+- **job failure** (RPC down, deploy failed), from a separate job, since then nothing else would tell you.
+
+Setup: create a bot with [@BotFather](https://t.me/BotFather), message it once, find your chat id, then store
+both as repository secrets (`gh secret set TELEGRAM_BOT_TOKEN`, `gh secret set TELEGRAM_CHAT_ID`; `gh` asks for
+the value, so it never lands in shell history). Without the secrets the step is skipped. Verify with
+**Actions → snapshot → Run workflow → test_telegram**. The bot token is never logged or put in an error.
 
 ## Design principles
 Validated ledgers only · `delivered_amount`, never `Amount` · BigInt drops, no floats ·

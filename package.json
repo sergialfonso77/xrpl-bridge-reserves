@@ -11,7 +11,8 @@
     "signers": "tsx src/cli.ts signers",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "site-data": "tsx src/cli.ts publish"
+    "site-data": "tsx src/cli.ts publish",
+    "notify": "tsx src/cli.ts notify"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
