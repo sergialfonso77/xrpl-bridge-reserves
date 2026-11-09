@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<title>XRP Bridge Reserves</title>
+<meta name="description" content="Public proof of reserves for XRP bridged from the XRPL to the XRPL EVM through Axelar.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+  <header>
+    <h1>XRP bridge reserves</h1>
+    <p class="sub">XRP locked in the Axelar gateway on the XRPL vs XRP outstanding on every destination chain.</p>
+  </header>
+
+  <section id="banner" class="banner loading" aria-live="polite">Loading latest snapshot…</section>
+
+  <section class="cards" id="cards" aria-label="Key figures"></section>
+
+  <section>
+    <h2>Collateral ratio over time</h2>
+    <div id="chart" class="chart" role="img" aria-label="Collateral ratio history"></div>
+    <p class="note" id="chart-note"></p>
+  </section>
+
+  <section>
+    <h2>Outstanding by destination</h2>
+    <div class="table-wrap">
+      <table id="outstanding">
+        <thead><tr><th>Chain</th><th class="num">XRP</th><th>How it is measured</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Gateway signers</h2>
+    <p id="signers"></p>
+  </section>
+
+  <section id="problems-section" hidden>
+    <h2>Open problems</h2>
+    <ul id="problems"></ul>
+  </section>
+
+  <section>
+    <h2>What this does and does not show</h2>
+    <ul class="notes">
+      <li><strong>Backing</strong> is the gateway's XRP balance minus the reserve the XRPL itself locks. Only validated ledgers are used.</li>
+      <li><strong>Outstanding</strong> is summed over every chain where the bridged-XRP token exists, enumerated from the Axelar ITS Hub, so a new destination cannot be left out silently (the report turns <em>unverified</em> instead).</li>
+      <li>On XRPL EVM it is the native supply; on Hedera and Stellar it is the supply tracked by the ITS Hub, which caps what can be redeemed. Stellar has no independent on-chain check yet.</li>
+      <li>The surplus is expected: gas fees paid on deposits stay in the gateway, as do deposits with unusable gas memos and some direct funding.</li>
+      <li>Measured outstanding is about 0.03% above what XRPL history predicts. That is the safe direction (liabilities overstated) but it is not yet fully explained.</li>
+      <li>Read-only monitor. Not an audit and not financial advice.</li>
+    </ul>
+  </section>
+
+  <footer id="footer"></footer>
+</main>
+<script src="app.js"></script>
+</body>
+</html>

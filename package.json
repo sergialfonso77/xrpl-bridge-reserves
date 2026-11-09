@@ -10,7 +10,8 @@
     "deposits": "tsx src/cli.ts deposits",
     "signers": "tsx src/cli.ts signers",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "site-data": "tsx src/cli.ts publish"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

@@ -1,8 +1,9 @@
 // Usage:
 //   npm run snapshot            gateway balance, signer list, reserve report -> data/latest.json
 //   npm run deposits -- 107000000  classify gateway transactions from a ledger index onwards (balance-verified)
+//   npm run site-data           snapshot + signer diff -> public/data/{latest,history}.json (scheduled job)
 //   npm run signers             compare current signer list with data/signers.json and print alerts
-import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { XrplClient } from "./xrpl.js";
 import { EvmClient } from "./evm.js";
 import { computeReport } from "./reserves.js";
@@ -11,6 +12,7 @@ import { classify } from "./deposits.js";
 import { verifiedAccountTx } from "./history.js";
 import { diffSignerLists, minSignersForQuorum } from "./signers.js";
 import { dropsToXrp } from "./amounts.js";
+import { appendHistory, historyPoint, toPublic, type Snapshot } from "./publish.js";
 
 const network = process.env.NETWORK ?? "mainnet";
 const config = JSON.parse(readFileSync(new URL("../config/networks.json", import.meta.url), "utf8"))[network];
@@ -25,7 +27,7 @@ async function outstandingOnDestinations(): Promise<DestinationMeasurement> {
   return measureOutstanding({ axelar: config.axelar, xrplEvm: config.xrplEvm, hedera: config.hedera });
 }
 
-async function snapshot() {
+async function takeSnapshot() {
   const [acct, res] = await Promise.all([xrpl.accountSnapshot(gateway), xrpl.reserves()]);
   let evm: unknown = null;
   try {
@@ -59,8 +61,34 @@ async function snapshot() {
     unmeasured,
     alerts,
   };
+  return out;
+}
+
+async function snapshot() {
+  const out = await takeSnapshot();
   writeFileSync(new URL("../data/latest.json", import.meta.url), json(out));
   console.log(json(out));
+}
+
+/** Scheduled job: snapshot + signer diff -> public/data/{latest,history}.json. Exit code stays 0; the workflow reads `problems`. */
+async function publish() {
+  const out = JSON.parse(json(await takeSnapshot())) as Snapshot;
+  const signersPath = new URL("../data/signers.json", import.meta.url);
+  const historyPath = new URL("../data/history.json", import.meta.url);
+  const publicDir = new URL("../public/data/", import.meta.url);
+  const prev = existsSync(signersPath) ? JSON.parse(readFileSync(signersPath, "utf8")) : null;
+  const signerAlerts = diffSignerLists(prev, out.signerList);
+  const history = existsSync(historyPath) ? JSON.parse(readFileSync(historyPath, "utf8")) : [];
+  const nextHistory = appendHistory(history, historyPoint(out));
+  const pub = toPublic(out, signerAlerts);
+  mkdirSync(publicDir, { recursive: true });
+  writeFileSync(new URL("latest.json", publicDir), json(pub));
+  writeFileSync(new URL("history.json", publicDir), JSON.stringify(nextHistory));
+  // State for the next run (kept on the `data` branch by the workflow).
+  writeFileSync(historyPath, JSON.stringify(nextHistory));
+  if (out.signerList) writeFileSync(signersPath, json(out.signerList));
+  console.log(`status=${pub.report.status} ratio=${pub.report.collateralRatio} problems=${pub.problems.length}`);
+  for (const p of pub.problems) console.log(`PROBLEM: ${p}`);
 }
 
 async function deposits(ledgerMin: number) {
@@ -103,9 +131,10 @@ const run = {
     return deposits(Number(arg));
   },
   signers,
+  publish,
 }[cmd ?? ""];
 if (!run) {
-  console.error("Commands: snapshot | deposits [ledgerMin] | signers");
+  console.error("Commands: snapshot | deposits <ledgerMin> | signers | publish");
   process.exit(1);
 }
 run().catch((e) => {

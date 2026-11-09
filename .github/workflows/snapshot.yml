@@ -1,0 +1,103 @@
+# Hourly proof-of-reserves snapshot, published as a static page on GitHub Pages.
+# State (signer list baseline, history, latest.json) lives on the `data` branch, never on main.
+# The page is deployed even when something is wrong (so it shows the problem); the run then goes red
+# so GitHub notifies the owner. Pages must be enabled once: Settings -> Pages -> Source: GitHub Actions.
+name: snapshot
+
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: snapshot
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write # push state to the `data` branch
+    outputs:
+      problems: ${{ steps.verdict.outputs.problems }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      - name: Restore state from the data branch
+        run: |
+          mkdir -p data
+          if git fetch --depth 1 origin data; then
+            for f in signers.json history.json; do
+              if git cat-file -e "FETCH_HEAD:$f" 2>/dev/null; then git show "FETCH_HEAD:$f" > "data/$f"; fi
+            done
+          fi
+
+      - name: Snapshot and build public data
+        run: npm run site-data
+
+      - name: Save state to the data branch
+        run: |
+          set -euo pipefail
+          if git fetch --depth 1 origin data; then
+            git worktree add --detach ../state FETCH_HEAD
+            cd ../state
+            git checkout -B data
+          else
+            git worktree add --detach ../state HEAD
+            cd ../state
+            git checkout --orphan data
+            git rm -rf -q .
+          fi
+          cp "$GITHUB_WORKSPACE/data/signers.json" "$GITHUB_WORKSPACE/data/history.json" "$GITHUB_WORKSPACE/public/data/latest.json" .
+          git add -A
+          if git diff --cached --quiet; then
+            echo "state unchanged"
+          else
+            git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+              commit -q -m "data $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            git push origin data
+          fi
+
+      - name: Read verdict
+        id: verdict
+        run: |
+          n=$(jq '.problems | length' public/data/latest.json)
+          echo "problems=$n" >> "$GITHUB_OUTPUT"
+          jq -r '.problems[] | "::warning::\(.)"' public/data/latest.json
+
+      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: public
+
+  deploy:
+    needs: publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+
+  verdict:
+    needs: [publish, deploy]
+    if: ${{ always() && needs.publish.result == 'success' && needs.publish.outputs.problems != '0' }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "::error::Proof of reserves reports ${{ needs.publish.outputs.problems }} problem(s); see the warnings of the publish job."
+          exit 1
