@@ -1,29 +1,29 @@
 {
   "schema": 1,
-  "takenAt": "2026-11-12T20:48:18.702Z",
+  "takenAt": "2026-11-13T01:48:08.701Z",
   "network": "mainnet",
   "gateway": "rfmS3zqrQrka8wVyhXifEeyTwe8AMz2Yhw",
-  "xrplLedger": 108289389,
+  "xrplLedger": 108293871,
   "report": {
-    "gatewayBalanceDrops": "1615882343514",
-    "ledgerReserveDrops": "42400000",
-    "backingDrops": "1615839943514",
-    "outstandingDrops": "1608270422798",
-    "surplusDrops": "7569520716",
+    "gatewayBalanceDrops": "1615883032324",
+    "ledgerReserveDrops": "41600000",
+    "backingDrops": "1615841432324",
+    "outstandingDrops": "1608271481540",
+    "surplusDrops": "7569950784",
     "collateralRatio": 1.004706,
     "status": "backed"
   },
   "human": {
-    "gatewayBalanceXrp": "1615882.343514",
-    "backingXrp": "1615839.943514",
-    "outstandingXrp": "1608270.422798",
-    "surplusXrp": "7569.520716"
+    "gatewayBalanceXrp": "1615883.032324",
+    "backingXrp": "1615841.432324",
+    "outstandingXrp": "1608271.48154",
+    "surplusXrp": "7569.950784"
   },
   "outstanding": [
     {
       "chain": "hedera",
       "method": "its hub tracked supply",
-      "drops": "12971983"
+      "drops": "12999490"
     },
     {
       "chain": "stellar",
@@ -33,7 +33,7 @@
     {
       "chain": "xrpl-evm",
       "method": "cosmos bank supply of axrp",
-      "drops": "1586810414209"
+      "drops": "1586811445444"
     }
   ],
   "unmeasured": [],
