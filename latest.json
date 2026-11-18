@@ -1,23 +1,23 @@
 {
   "schema": 1,
-  "takenAt": "2026-11-18T13:07:13.397Z",
+  "takenAt": "2026-11-18T21:25:47.048Z",
   "network": "mainnet",
   "gateway": "rfmS3zqrQrka8wVyhXifEeyTwe8AMz2Yhw",
-  "xrplLedger": 108411249,
+  "xrplLedger": 108418649,
   "report": {
-    "gatewayBalanceDrops": "1618529999881",
-    "ledgerReserveDrops": "43200000",
-    "backingDrops": "1618486799881",
+    "gatewayBalanceDrops": "1618529834881",
+    "ledgerReserveDrops": "43000000",
+    "backingDrops": "1618486834881",
     "outstandingDrops": "1610912430156",
-    "surplusDrops": "7574369725",
+    "surplusDrops": "7574404725",
     "collateralRatio": 1.004701,
     "status": "backed"
   },
   "human": {
-    "gatewayBalanceXrp": "1618529.999881",
-    "backingXrp": "1618486.799881",
+    "gatewayBalanceXrp": "1618529.834881",
+    "backingXrp": "1618486.834881",
     "outstandingXrp": "1610912.430156",
-    "surplusXrp": "7574.369725"
+    "surplusXrp": "7574.404725"
   },
   "outstanding": [
     {
