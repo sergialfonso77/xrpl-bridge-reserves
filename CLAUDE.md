@@ -82,8 +82,9 @@ instant (small skew); native supply is rounded up to drops.
 - `src/signers.ts` — signer list diff, min signers to reach quorum
 - `src/reserves.ts` — pure proof-of-reserves arithmetic
 - `src/publish.ts` — pure helpers for the scheduled job (public JSON, history downsampling, health verdict)
+- `src/evmlogs.ts` / `src/reconcile.ts` — XRPL EVM mint events (hand-decoded ABI, 10k-block windows, retries, multi-pass union) and the pure deposit↔mint matcher
 - `src/telegram.ts` — alert planning (new/changed/still-open/resolved, signer events one-shot) + Telegram client (token never leaks)
-- `src/cli.ts` — `snapshot | deposits <ledgerMin> | signers | publish | notify [--test]` (`npm run site-data`, `npm run notify`)
+- `src/cli.ts` — `snapshot | deposits <ledgerMin> | signers | publish | notify [--test] | reconcile <ledgerMin> [ledgerMax]` (`npm run site-data`, `npm run notify`)
 - `public/` — static dashboard (`index.html`, `style.css`, `app.js`; strict CSP, no inline code, `public/data/` is generated and gitignored)
 - `.github/workflows/` — `ci.yml` (typecheck + tests) and `snapshot.yml` (hourly cron → Pages; state on the `data` branch)
 - `test/` — vitest, fixtures built in `test/helpers.ts`
@@ -97,7 +98,7 @@ npm test · npm run typecheck · npm run snapshot · npm run deposits -- <ledger
   quorum 19). `snapshot` now reports `backed`: backing 1,617,056.18 XRP vs outstanding 1,609,466.12 XRP.
 - IOUs on the gateway are bridged tokens the gateway issues itself (SOL, SHX, mXRP…), not locked XRP;
   they are excluded from the XRP proof. `iou_issuer_not_gateway` flags third-party IOUs.
-- 66 unit tests pass. Public repo + Pages deployed. Gateway history: 5.8M tx (mostly DEX/AMM noise from the gateway being an IOU issuer), 18.7k ITS XRP deposits, 10.3k releases.
+- 89 unit tests pass. Phase 2 reconciliation (`npm run reconcile`) validated: recent 5/5 matched (median 57 s), Jul-2025 window ledgers 97.15M–97.215M 270/270 matched (median 2 min, max 1.7 h), 0 unmatched/orphans. Full-history run: see below. Public repo + Pages deployed. Gateway history: 5.8M tx (mostly DEX/AMM noise from the gateway being an IOU issuer), 18.7k ITS XRP deposits, 10.3k releases.
 
 ## Next steps
 1. History scans are now gap-checked (`src/history.ts`); never read `account_tx` any other way. Limit: a dropped

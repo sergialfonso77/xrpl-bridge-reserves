@@ -102,3 +102,28 @@ describe("classify", () => {
     expect(classify(v1, GATEWAY)!.netDrops).toBe(1_900_000n);
   });
 });
+
+describe("destination_address memo formats", () => {
+  const ADDR = "b5fb4be02232b1bba4dc8f81dc24c26980de9e3c";
+  const asciiMemos = (text: string) => [
+    memo("type", "interchain_transfer"),
+    memo("destination_address", Buffer.from(text, "utf8").toString("hex"), true),
+    memo("destination_chain", "xrpl-evm"),
+    memo("gas_fee_amount", "200000"),
+  ];
+  it("reads the ASCII-hex form the Axelar relayer sends", () => {
+    const ev = classify(payment({ amount: "250000", delivered: "250000", memos: asciiMemos(ADDR) }), GATEWAY)!;
+    expect(ev.destinationAddress).toBe(ADDR);
+    expect(ev.netDrops).toBe(50_000n);
+    expect(ev.anomalies).toEqual([]);
+  });
+  it("accepts a 0x prefix and mixed case in the ASCII form", () => {
+    const ev = classify(payment({ amount: "250000", delivered: "250000", memos: asciiMemos("0xB5FB4BE02232B1bBA4dC8f81dc24C26980dE9e3C") }), GATEWAY)!;
+    expect(ev.destinationAddress).toBe(ADDR);
+  });
+  it("keeps the raw form working and leaves non-addresses untouched", () => {
+    expect(classify(payment({ amount: "5000000", delivered: "5000000", memos: itsMemos() }), GATEWAY)!.destinationAddress).toBe("1234567890abcdef1234567890abcdef12345678");
+    const bad = classify(payment({ amount: "250000", delivered: "250000", memos: asciiMemos("not-an-address") }), GATEWAY)!;
+    expect(bad.destinationAddress).not.toMatch(/^[0-9a-f]{40}$/);
+  });
+});

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { measureOutstanding, scaleToDrops, type DestinationConfig, type JsonFetcher } from "../src/destinations.js";
+import { measureOutstanding, scaleToDrops, itsEdgeContract, type DestinationConfig, type JsonFetcher } from "../src/destinations.js";
 
 const cfg: DestinationConfig = {
   axelar: { rest: ["https://axelar.test"], itsHub: "axelar1hub", originChain: "xrpl", xrpTokenId: "ab".repeat(32) },
@@ -89,5 +89,16 @@ describe("measureOutstanding", () => {
     await expect(measureOutstanding(cfg, fakeFetcher({
       instances: { stellar: { supply: { tracked: "-5" }, decimals: 6 } },
     }))).rejects.toThrow(/unsigned integer/);
+  });
+});
+
+describe("itsEdgeContract", () => {
+  it("returns the edge contract registered for a chain and fails when there is none", async () => {
+    const f: JsonFetcher = async (url) => {
+      const msg = JSON.parse(Buffer.from(url.split("/smart/")[1]!, "base64").toString());
+      return { data: msg.its_chain.chain === "xrpl-evm" ? { its_edge_contract: "0xB5FB4BE02232B1bBA4dC8f81dc24C26980dE9e3C" } : null };
+    };
+    expect(await itsEdgeContract(cfg.axelar, "xrpl-evm", f)).toBe("0xB5FB4BE02232B1bBA4dC8f81dc24C26980dE9e3C");
+    await expect(itsEdgeContract(cfg.axelar, "nowhere", f)).rejects.toThrow(/no edge contract/);
   });
 });

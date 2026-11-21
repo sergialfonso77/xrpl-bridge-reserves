@@ -64,6 +64,13 @@ async function hubQuery<T>(cfg: DestinationConfig["axelar"], msg: unknown, f: Js
   return body.data;
 }
 
+/** The ITS edge contract the Hub has registered for a chain (e.g. the ITS proxy on XRPL EVM). */
+export async function itsEdgeContract(cfg: DestinationConfig["axelar"], chain: string, f: JsonFetcher = fetchJson): Promise<string> {
+  const r = await hubQuery<{ its_edge_contract: string } | null>(cfg, { its_chain: { chain } }, f);
+  if (!r?.its_edge_contract) throw new Error(`ITS Hub has no edge contract for chain ${chain}`);
+  return r.its_edge_contract;
+}
+
 async function hubChains(cfg: DestinationConfig["axelar"], f: JsonFetcher): Promise<string[]> {
   const limit = 100;
   const chains: string[] = [];

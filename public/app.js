@@ -1,6 +1,7 @@
 "use strict";
 // Renders data/latest.json and data/history.json. All values go through textContent / DOM attributes, never innerHTML.
-const STALE_AFTER_MS = 3 * 60 * 60 * 1000;
+// GitHub runs scheduled workflows best-effort: gaps of 4-8 h happen. Only call the data stale when it is clearly late.
+const STALE_AFTER_MS = 12 * 60 * 60 * 1000;
 const SVG = "http://www.w3.org/2000/svg";
 
 function el(tag, text, cls) {

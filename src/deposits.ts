@@ -1,6 +1,6 @@
 // Classify validated XRPL transactions that touch the Axelar gateway account.
 import { parseDrops } from "./amounts.js";
-import { decodeMemos } from "./memos.js";
+import { decodeMemos, evmAddressFromMemo } from "./memos.js";
 
 const TF_PARTIAL_PAYMENT = 0x00020000;
 
@@ -16,6 +16,7 @@ export type AnomalyCode =
 export interface GatewayEvent {
   hash: string;
   ledgerIndex: number;
+  closeTime?: number; // unix seconds of the validated ledger that included the tx
   kind: "deposit" | "release" | "signer_list_set" | "other";
   asset: "XRP" | "IOU";
   currency?: string; // IOU only
@@ -30,9 +31,15 @@ export interface GatewayEvent {
 }
 
 /** Normalise API v1 ({tx, meta}) and API v2 ({tx_json, meta, hash}) entries. */
-export function normaliseEntry(entry: any): { tx: any; meta: any; hash: string; ledgerIndex: number; validated: boolean } {
+const RIPPLE_EPOCH = 946_684_800;
+
+export function normaliseEntry(entry: any): { tx: any; meta: any; hash: string; ledgerIndex: number; validated: boolean; closeTime?: number } {
   const tx = entry.tx_json ?? entry.tx;
+  // v2 gives close_time_iso on the entry; v1 gives the Ripple-epoch `date` on the tx.
+  const iso = Date.parse(entry.close_time_iso ?? "");
+  const closeTime = Number.isFinite(iso) ? Math.floor(iso / 1000) : typeof tx?.date === "number" ? tx.date + RIPPLE_EPOCH : undefined;
   return {
+    closeTime,
     tx,
     meta: entry.meta,
     hash: entry.hash ?? tx?.hash,
@@ -42,11 +49,11 @@ export function normaliseEntry(entry: any): { tx: any; meta: any; hash: string; 
 }
 
 export function classify(entry: any, gateway: string): GatewayEvent | null {
-  const { tx, meta, hash, ledgerIndex, validated } = normaliseEntry(entry);
+  const { tx, meta, hash, ledgerIndex, validated, closeTime } = normaliseEntry(entry);
   // Rule 1: only validated ledgers, only successful transactions.
   if (!validated || !tx || meta?.TransactionResult !== "tesSUCCESS") return null;
 
-  const base = { hash, ledgerIndex, gasFeeDrops: null, netDrops: null, anomalies: [] as AnomalyCode[] };
+  const base = { hash, ledgerIndex, closeTime, gasFeeDrops: null, netDrops: null, anomalies: [] as AnomalyCode[] };
 
   if (tx.TransactionType === "SignerListSet" && tx.Account === gateway) {
     return { ...base, kind: "signer_list_set", asset: "XRP", deliveredDrops: null };
@@ -87,10 +94,10 @@ export function classify(entry: any, gateway: string): GatewayEvent | null {
       }
     }
     return {
-      hash, ledgerIndex, kind: "deposit", asset: isIou ? "IOU" : "XRP", ...iou,
+      hash, ledgerIndex, closeTime, kind: "deposit", asset: isIou ? "IOU" : "XRP", ...iou,
       deliveredDrops, gasFeeDrops, netDrops,
       destinationChain: memos.destination_chain,
-      destinationAddress: memos.destination_address,
+      destinationAddress: evmAddressFromMemo(memos.destination_address) ?? memos.destination_address,
       counterparty: tx.Account,
       anomalies,
     };

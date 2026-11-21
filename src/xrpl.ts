@@ -108,6 +108,13 @@ export class XrplClient implements HistorySource {
     return Number(r.ledger_index);
   }
 
+  /** Unix seconds at which a validated ledger closed. */
+  async ledgerCloseTime(ledger: number): Promise<number> {
+    const r: any = await this.request("ledger", { ledger_index: ledger });
+    if (r.validated !== true) throw new Error(`ledger ${ledger} is not validated`);
+    return Number(r.ledger.close_time) + 946_684_800; // Ripple epoch -> unix
+  }
+
   async balanceAt(account: string, ledger: number): Promise<bigint> {
     try {
       const r: any = await this.request("account_info", { account, ledger_index: ledger });

@@ -13,6 +13,8 @@ the **XRPL EVM sidechain** through **Axelar**.
 - **Deposits** — every validated payment into the gateway, decoded from Axelar memos, with
   anomaly codes: partial payments (`delivered_amount` ≠ `Amount`), missing memos, gas fee ≥ amount
   (unrefundable), non-integer XRP gas fee, unavailable delivered amount.
+- **Reconciliation** — every XRPL deposit to XRPL EVM paired with its mint from on-chain data alone (sender,
+  recipient, exact amount): unmatched deposits (stuck or delayed) and orphan mints.
 - **Signer set** — changes to the gateway's multisig `SignerList` (added/removed signers, weight
   changes, quorum changes) and how many signers are needed to move funds.
 
@@ -24,11 +26,12 @@ npm run snapshot          # writes data/latest.json
 npm run signers           # alerts vs the last saved signer list (exit 2 on critical)
 npm run deposits -- 108000000   # balance-verified history from that ledger
 npm run site-data         # snapshot + signer diff -> public/data/{latest,history}.json
+npm run reconcile -- 108430000   # pair XRPL deposits with their EVM mints (add a 2nd ledger to bound the window)
 npm run notify -- --test  # Telegram test (needs TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID)
 ```
 
 ## Public dashboard (GitHub Actions + Pages)
-`.github/workflows/snapshot.yml` runs hourly: it takes a snapshot, publishes `public/` (a static,
+`.github/workflows/snapshot.yml` is scheduled hourly (GitHub runs schedules best-effort; in practice every few hours, so the page only calls data stale after 12 h): it takes a snapshot, publishes `public/` (a static,
 dependency-free page with a strict Content-Security-Policy) to GitHub Pages and keeps its state
 (signer-list baseline, history, `latest.json`) on a separate `data` branch, never on `main`.
 

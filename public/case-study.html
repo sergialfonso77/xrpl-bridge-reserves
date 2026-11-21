@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<title>Case Study: XRP Bridge Reserves</title>
+<meta name="description" content="How an independent proof of reserves for XRP bridged from the XRPL to the XRPL EVM was built, what it found, and where it stops.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+  <header>
+    <h1>Independent proof of reserves for the XRPL ⇄ XRPL EVM bridge</h1>
+    <p class="sub">A case study: how it was built, what it found, and where it stops. Figures are from 21 November 2026; the <a href="index.html">dashboard</a> has the live ones.</p>
+    <p class="note"><a href="index.html">Live dashboard</a> · <a href="https://github.com/sergialfonso77/xrpl-bridge-reserves">Source code (MIT)</a></p>
+  </header>
+
+  <section>
+    <h2>The problem</h2>
+    <p>Cross-chain bridges are where the largest sums have been lost in crypto, almost always through compromised custody (keys or signer quorum) or tokens minted without backing. XRP bridged from the XRP Ledger to the XRPL EVM through Axelar is held by a single multisig account on the XRPL, and the native gas token of the whole EVM chain is minted against it. Users trust that arrangement but have no continuous, independent way to check it.</p>
+    <p>This project is a read-only monitor: no keys, no signing, no custody. It answers one question anyone can re-run: <em>is the XRP locked on the XRPL at least the XRP outstanding on every chain where it was minted?</em></p>
+  </section>
+
+  <section>
+    <h2>Where it stands today</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Measure</th><th class="num">Value (21 Nov 2026)</th></tr></thead>
+        <tbody>
+          <tr><td>XRP locked in the gateway, net of the ledger reserve</td><td class="num">1,619,155.29 XRP</td></tr>
+          <tr><td>XRP outstanding on destinations</td><td class="num">1,611,586.87 XRP</td></tr>
+          <tr><td>Collateral ratio</td><td class="num">1.0047</td></tr>
+          <tr><td>Destination chains found</td><td class="num">3 (XRPL EVM, Stellar, Hedera)</td></tr>
+          <tr><td>Signers / quorum needed to move funds</td><td class="num">28 / 19</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Method: no number that was not measured</h2>
+    <ul class="notes">
+      <li><strong>Only validated data.</strong> Failed or unvalidated transactions are ignored; amounts are read from <code>delivered_amount</code>, never <code>Amount</code> (the partial-payment trap); everything is integer drops, never floats.</li>
+      <li><strong>Destinations are discovered, not listed.</strong> Chains holding the bridged-XRP token are enumerated from the Axelar ITS Hub. A chain with no tracked supply and no measurer turns the report <em>unverified</em> instead of being silently left out.</li>
+      <li><strong>Every history read is checked against the ledger.</strong> Public XRPL nodes can drop transactions between pages without any error. History is accepted only in windows whose transactions add up to the account's real balance change; a window that does not is refetched from another node, and if it still fails the program stops rather than report partial data.</li>
+      <li><strong>Conservative by construction.</strong> Where two sources disagree, the larger liability is used and an alert is raised; supplies are rounded up to drops.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>What it found</h2>
+    <ul class="notes">
+      <li><strong>An undocumented destination.</strong> Stellar holds about 24.5k bridged XRP. Neither the documentation nor the explorer lists it; only the ITS Hub does. A monitor built from the documented list would have undercounted liabilities.</li>
+      <li><strong>Public XRPL nodes lose rows silently.</strong> In a scan of 5.8 million gateway transactions, 160 were missing from a naive pagination, including a 999 XRP payment. Balance-checked windows caught and repaired all of them. Anyone building on public XRPL history is exposed to this.</li>
+      <li><strong>Where the surplus comes from.</strong> The ~7.5k XRP surplus is explained: gas fees paid on deposits stay in the gateway (4,503 XRP in total), plus direct funding and reserve top-ups, minus the transaction fees the gateway pays on releases. The account balance reconciles to the drop across 246 verified windows.</li>
+      <li><strong>Deposits with no refund path.</strong> 203 deposits (about 38 XRP) carried an unusable gas memo (gas fee not below the amount, missing, or not an integer). They were never minted and the funds stay in the gateway.</li>
+      <li><strong>A constant 2,999.24 XRP in the native supply of XRPL EVM</strong> that no bridge event accounts for, identical at two blocks 1,509 apart. It is not bridge-backed, so the dashboard overstates that chain's liability by that amount; the safe direction.</li>
+      <li><strong>A recurring liveness probe.</strong> One XRPL account sends a 0.05 XRP transfer to the ITS contract on XRPL EVM every 12 hours (observed over the last days). It looks like an automated end-to-end check; its owner is not identified. It is useful as a delay measurement, and the reconciliation must treat it as ordinary traffic.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Event-level reconciliation</h2>
+    <p>Beyond totals, each XRPL deposit is paired with the mint it should cause on XRPL EVM using only on-chain data: the mint event carries the original XRPL sender, the recipient and the exact amount. Pairs are made causally per (sender, recipient, amount), so no third-party index is needed. What remains is either an unmatched deposit (stuck, delayed or never delivered) or an orphan mint (no deposit behind it). This is the check from the cross-chain rule-based detection literature (XChainWatcher) applied to this bridge.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Window validated</th><th class="num">Deposits</th><th class="num">Matched</th><th class="num">Unmatched / orphan</th><th class="num">Delay (median, max)</th></tr></thead>
+        <tbody>
+          <tr><td>Last 2.5 days (Nov 2026)</td><td class="num">5</td><td class="num">5</td><td class="num">0 / 0</td><td class="num">57 s, 64 s</td></tr>
+          <tr><td>Dense historical window (Jul 2025, ledgers 97.15M to 97.215M)</td><td class="num">270</td><td class="num">270</td><td class="num">0 / 0</td><td class="num">2 min, 1.7 h</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">Two lessons from validating it against live data: the sender's memo can encode the recipient address two different ways (raw bytes or its hex text), and the public EVM RPC load-balances over nodes that do not all hold old blocks, so a block or a log query can come back empty without error. The tool retries missing blocks and, when a deposit looks unmatched, re-reads the logs and takes the union before reporting it. Mints right after a window's end, or deposits just before its start, are classed as edge effects, not findings.</p>
+  </section>
+
+  <section>
+    <h2>Operating it</h2>
+    <ul class="notes">
+      <li>A scheduled GitHub Actions job takes a snapshot, publishes this static page (strict Content-Security-Policy, no third-party code) and keeps its state on a separate branch. GitHub runs schedules best-effort, so in practice every few hours.</li>
+      <li>Telegram alerts for a new, changed or resolved problem, a change to the signer list, or a failed job. The job also fails visibly so GitHub notifies the owner.</li>
+      <li>The published JSON (<a href="data/latest.json">latest</a>, <a href="data/history.json">history</a>) can be consumed by anyone, for example by a protocol that wants to gate the use of bridged XRP on the reserve status.</li>
+      <li>Third-party actions are pinned by commit SHA; the test suite (89 tests) runs on every push.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Limits, stated plainly</h2>
+    <ul class="notes">
+      <li>It detects and alerts; it cannot stop an attack. It is not an audit and not financial advice.</li>
+      <li>Freshness is hours, not seconds, so it is unsuitable for decisions that cannot tolerate delay.</li>
+      <li>Hedera and Stellar are measured through the ITS Hub's tracked supply. Stellar's token has no total-supply function and the public RPC keeps only seven days of events, so there is no independent on-chain check there yet.</li>
+      <li>The balance check cannot see a dropped transaction that did not move the gateway's XRP (for example a third-party token payment).</li>
+      <li>It trusts the public RPC providers and the ITS Hub for the facts it cannot verify directly.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>What comes next</h2>
+    <ul class="notes">
+      <li>Reconcile the full bridge history (the two windows above are samples) and then run the reconciliation inside the scheduled job, alerting on deposits that stay unmatched past an agreed delay.</li>
+      <li>Measure XRPL EVM from its bridge events instead of its native supply, removing the 2,999.24 XRP offset.</li>
+      <li>An independent supply measurement for Stellar, and the same monitoring for any new destination as soon as the Hub lists it.</li>
+      <li>A versioned, documented schema for the published data so third parties can build on it.</li>
+    </ul>
+  </section>
+
+  <footer>Built with Claude Code. Source, tests and the full findings log are in the repository.</footer>
+</main>
+</body>
+</html>

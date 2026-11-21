@@ -12,7 +12,8 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "site-data": "tsx src/cli.ts publish",
-    "notify": "tsx src/cli.ts notify"
+    "notify": "tsx src/cli.ts notify",
+    "reconcile": "tsx src/cli.ts reconcile"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
