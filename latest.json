@@ -1,9 +1,9 @@
 {
   "schema": 1,
-  "takenAt": "2026-11-21T17:28:56.309Z",
+  "takenAt": "2026-11-21T18:42:02.745Z",
   "network": "mainnet",
   "gateway": "rfmS3zqrQrka8wVyhXifEeyTwe8AMz2Yhw",
-  "xrplLedger": 108479731,
+  "xrplLedger": 108480833,
   "report": {
     "gatewayBalanceDrops": "1619198694928",
     "ledgerReserveDrops": "43400000",
