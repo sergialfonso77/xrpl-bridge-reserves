@@ -1,23 +1,23 @@
 {
   "schema": 1,
-  "takenAt": "2026-11-25T02:23:23.060Z",
+  "takenAt": "2026-11-25T12:48:28.716Z",
   "network": "mainnet",
   "gateway": "rfmS3zqrQrka8wVyhXifEeyTwe8AMz2Yhw",
-  "xrplLedger": 108552761,
+  "xrplLedger": 108562236,
   "report": {
-    "gatewayBalanceDrops": "1630130225204",
-    "ledgerReserveDrops": "51000000",
-    "backingDrops": "1630079225204",
-    "outstandingDrops": "1622524290894",
-    "surplusDrops": "7554934310",
+    "gatewayBalanceDrops": "1630128783931",
+    "ledgerReserveDrops": "49000000",
+    "backingDrops": "1630079783931",
+    "outstandingDrops": "1622524179581",
+    "surplusDrops": "7555604350",
     "collateralRatio": 1.004656,
     "status": "backed"
   },
   "human": {
-    "gatewayBalanceXrp": "1630130.225204",
-    "backingXrp": "1630079.225204",
-    "outstandingXrp": "1622524.290894",
-    "surplusXrp": "7554.93431"
+    "gatewayBalanceXrp": "1630128.783931",
+    "backingXrp": "1630079.783931",
+    "outstandingXrp": "1622524.179581",
+    "surplusXrp": "7555.60435"
   },
   "outstanding": [
     {
@@ -28,12 +28,12 @@
     {
       "chain": "stellar",
       "method": "its hub tracked supply",
-      "drops": "24699786461"
+      "drops": "24699626148"
     },
     {
       "chain": "xrpl-evm",
       "method": "cosmos bank supply of axrp",
-      "drops": "1597811504943"
+      "drops": "1597811553943"
     }
   ],
   "unmeasured": [],
