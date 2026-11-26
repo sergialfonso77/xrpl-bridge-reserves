@@ -1,23 +1,23 @@
 {
   "schema": 1,
-  "takenAt": "2026-11-26T15:10:08.222Z",
+  "takenAt": "2026-11-26T23:49:34.345Z",
   "network": "mainnet",
   "gateway": "rfmS3zqrQrka8wVyhXifEeyTwe8AMz2Yhw",
-  "xrplLedger": 108586219,
+  "xrplLedger": 108594147,
   "report": {
-    "gatewayBalanceDrops": "1629367573664",
-    "ledgerReserveDrops": "47200000",
-    "backingDrops": "1629320373664",
-    "outstandingDrops": "1621763854098",
-    "surplusDrops": "7556519566",
-    "collateralRatio": 1.004659,
+    "gatewayBalanceDrops": "1629367408664",
+    "ledgerReserveDrops": "47000000",
+    "backingDrops": "1629320408664",
+    "outstandingDrops": "1621755450383",
+    "surplusDrops": "7564958281",
+    "collateralRatio": 1.004664,
     "status": "backed"
   },
   "human": {
-    "gatewayBalanceXrp": "1629367.573664",
-    "backingXrp": "1629320.373664",
-    "outstandingXrp": "1621763.854098",
-    "surplusXrp": "7556.519566"
+    "gatewayBalanceXrp": "1629367.408664",
+    "backingXrp": "1629320.408664",
+    "outstandingXrp": "1621755.450383",
+    "surplusXrp": "7564.958281"
   },
   "outstanding": [
     {
@@ -28,7 +28,7 @@
     {
       "chain": "stellar",
       "method": "its hub tracked supply",
-      "drops": "23847036676"
+      "drops": "23838632961"
     },
     {
       "chain": "xrpl-evm",
